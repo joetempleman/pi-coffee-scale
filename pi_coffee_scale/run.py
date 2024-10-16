@@ -64,10 +64,12 @@ def connect(addr="68:5E:1C:15:BC:F7"):
 read = 0
 
 def get_weight(handle, value): 
+    logger.info("Entered get_weight")
     weight = int(''.join(([str(v - 48) for v in value[3:8]]))) / 10
     local_read = read
     time.sleep(1)
     logger.info("read == %s, local_read == %s", read, local_read)
+    read = local_read + 1
 
 if __name__ == '__main__':
     # addresses = pyacaia.find_acaia_devices(backend='pygatt')
