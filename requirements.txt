@@ -1,1 +1,2 @@
 pygatt[GATTTOOL]
+gpiozero

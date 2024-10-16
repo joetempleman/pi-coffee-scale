@@ -3,6 +3,10 @@ import logging
 import time
 from pygatt import GATTToolBackend
 from pygatt.exceptions import NotConnectedError
+from gpiozero import OutputDevice, Button
+
+
+WEIGHT_BUFFER = 1
 
 BASE_UUID = '0000%s-0000-1000-8000-00805f9b34fb'
 DATA_SERVICE = BASE_UUID % 'ffe0'
@@ -26,10 +30,15 @@ CMD_TOGGLE_UNIT = 0x55
 MAX_TRIES = 100
 TRIES_BEFORE_RESET = 5
 
+RELAY_PIN = 2
+BUTTON_PIN = 3
+
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.debug("Starting")
 
+relay = OutputDevice(RELAY_PIN, active_high=False, initial_value=False)
+button = Button(BUTTON_PIN)
 
 def reset(adapter):
     logger.info("Resetting Adapter")
@@ -37,11 +46,14 @@ def reset(adapter):
     logger.info("Starting Adapter")
     adapter.start(); 
 
-def connect(addr="68:5E:1C:15:BC:F7"):
+def get_adapter():
     logger.info("Getting Adapter")
     adapter = GATTToolBackend('hci0'); 
 
     reset(adapter)
+    return adapter
+
+def connect(adapter, addr="68:5E:1C:15:BC:F7"):
 
     logger.info("Connecting to %s", addr)
     tries = 0
@@ -61,16 +73,29 @@ def connect(addr="68:5E:1C:15:BC:F7"):
                 reset()
     return d
 
-read = 0
+def monitor_weight(handle, value, target_weight):
+    global relay
+    global weight_reading
+    logger.info("Entered monitor_weight")
+    weight_reading = int(''.join(([str(v - 48) for v in value[3:8]]))) / 10
+    if weight_reading + WEIGHT_BUFFER > target_weight:
+        relay.off()
 
-def get_weight(handle, value): 
-    logger.info("Entered get_weight")
-    weight = int(''.join(([str(v - 48) for v in value[3:8]]))) / 10
-    global read
-    local_read = read
-    time.sleep(1)
-    logger.info("read == %s, local_read == %s", read, local_read)
-    read = local_read + 1
+def button_pressed(adapter, device):
+    global relay
+    global weight_reading
+    if relay.value:
+        relay.off()
+
+    if relay.value == False:
+        logger.info("Subscribing to weight")
+        weight_reading = 0
+        d.subscribe(DATA_CHARACTERISTIC, callback=monitor_weight, wait_for_response=False)
+        while not weight_reading:
+            logger.info("Waiting for weight reading")
+            time.sleep(0.1)
+        logger.info("Weight reading working. Enabling relay")
+        relay.on()
 
 if __name__ == '__main__':
     # addresses = pyacaia.find_acaia_devices(backend='pygatt')
@@ -82,9 +107,13 @@ if __name__ == '__main__':
     #     sys.exit(1)
 
     # addr = addresses[0]
-    d = connect()
+    adapter = get_adapter()
+    d = connect(adapter)
     logger.info("Subscribing to handle")
-    d.subscribe(DATA_CHARACTERISTIC, callback=get_weight, wait_for_response=False)
+
+    button.when_pressed = lambda: button_pressed(adapter, d, 15)
+    
+    d.subscribe(DATA_CHARACTERISTIC, callback=monitor_weight, wait_for_response=False)
     logger.info("Subscribed")        
     while True:
         time.sleep(100)
