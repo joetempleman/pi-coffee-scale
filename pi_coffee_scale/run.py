@@ -22,7 +22,7 @@ if __name__ == '__main__':
     addr = "68:5E:1C:15:BC:F7"
     logger.info("Getting Adapter")
     adapter = GATTToolBackend('hci0'); 
-    logger.info("Getting Adapter")
+    logger.info("Resetting Adapter")
     adapter.reset(); 
     logger.info("Starting Adapter")
     adapter.start(); 
@@ -40,7 +40,7 @@ if __name__ == '__main__':
             else:
                 raise
     logger.info("Subscribing to handle")
-    d.subscribe('0000ffe1-0000-1000-8000-00805f9b34fb', handle)
+    d.subscribe('0000ffe1-0000-1000-8000-00805f9b34fb', callback=handle, wait_for_response=False )
     logger.info("Subscribed")        
     while True:
         logger.info("Slept for 5 seconds")
