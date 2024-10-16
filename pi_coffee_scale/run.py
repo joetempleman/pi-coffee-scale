@@ -4,9 +4,44 @@ import time
 from pygatt import GATTToolBackend
 from pygatt.exceptions import NotConnectedError
 
+MAX_TRIES = 100
+TRIES_BEFORE_RESET = 5
+
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.debug("Starting")
+
+
+def reset(adapter):
+    logger.info("Resetting Adapter")
+    adapter.reset(); 
+    logger.info("Starting Adapter")
+    adapter.start(); 
+
+def connect(addr="68:5E:1C:15:BC:F7"):
+    logger.info("Getting Adapter")
+    adapter = GATTToolBackend('hci0'); 
+
+    reset(adapter)
+
+    logger.info("Connecting to %s", addr)
+    tries = 0
+    d = None
+    while d == None:
+        try:
+            d = adapter.connect(addr)
+            logger.info("Connected")
+        except NotConnectedError:
+            tries += 1
+            if tries == MAX_TRIES:
+                raise            
+            
+            # Every X tries, reset adapter
+            if tries % TRIES_BEFORE_RESET == 0:
+                logger.error("Failed to connect, resetting adapter and retrying")
+                reset()
+    return d
+
 if __name__ == '__main__':
     # addresses = pyacaia.find_acaia_devices(backend='pygatt')
 
@@ -19,29 +54,9 @@ if __name__ == '__main__':
     # addr = addresses[0]
     def handle(handle, value): 
         print(int(''.join(([str(v - 48) for v in value[3:8]]))) / 10)
-    addr = "68:5E:1C:15:BC:F7"
-    logger.info("Getting Adapter")
-    adapter = GATTToolBackend('hci0'); 
-    logger.info("Resetting Adapter")
-    adapter.reset(); 
-    logger.info("Starting Adapter")
-    adapter.start(); 
-    logger.info("Connecting to %s", addr)
-    tries = 0
-    d = None
-    while d == None:
-        try:
-            d = adapter.connect(addr)
-            logger.info("Connected")
-        except NotConnectedError:
-            if tries < 5:    
-                logger.error("Failed to connect, retrying")
-                tries += 1
-            else:
-                raise
+    d = connect()
     logger.info("Subscribing to handle")
-    d.subscribe('0000ffe1-0000-1000-8000-00805f9b34fb', callback=handle, wait_for_response=False )
+    d.subscribe('0000ffe1-0000-1000-8000-00805f9b34fb', callback=handle, wait_for_response=False)
     logger.info("Subscribed")        
     while True:
-        logger.info("Slept for 5 seconds")
-        time.sleep(5)
+        time.sleep(100)
