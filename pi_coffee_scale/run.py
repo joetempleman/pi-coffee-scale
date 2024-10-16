@@ -4,6 +4,25 @@ import time
 from pygatt import GATTToolBackend
 from pygatt.exceptions import NotConnectedError
 
+BASE_UUID = '0000%s-0000-1000-8000-00805f9b34fb'
+DATA_SERVICE = BASE_UUID % 'ffe0'
+DATA_CHARACTERISTIC = BASE_UUID % 'ffe1'
+
+FELICITA_GRAM_UNIT = 'g'
+FELICITA_OUNCE_UNIT = 'oz'
+
+MIN_BATTERY_LEVEL = 129
+MAX_BATTERY_LEVEL = 158
+
+CMD_START_TIMER = 0x52
+CMD_STOP_TIMER = 0x53
+CMD_RESET_TIMER = 0x43
+
+CMD_TOGGLE_TIMER = 0x42
+CMD_TOGGLE_PRECISION = 0x44
+CMD_TARE = 0x54
+CMD_TOGGLE_UNIT = 0x55
+
 MAX_TRIES = 100
 TRIES_BEFORE_RESET = 5
 
@@ -42,6 +61,14 @@ def connect(addr="68:5E:1C:15:BC:F7"):
                 reset()
     return d
 
+read = 0
+
+def get_weight(handle, value): 
+    weight = int(''.join(([str(v - 48) for v in value[3:8]]))) / 10
+    local_read = read
+    time.sleep(1)
+    logger.info("read == %s, local_read == %s", read, local_read)
+
 if __name__ == '__main__':
     # addresses = pyacaia.find_acaia_devices(backend='pygatt')
 
@@ -52,11 +79,9 @@ if __name__ == '__main__':
     #     sys.exit(1)
 
     # addr = addresses[0]
-    def handle(handle, value): 
-        print(int(''.join(([str(v - 48) for v in value[3:8]]))) / 10)
     d = connect()
     logger.info("Subscribing to handle")
-    d.subscribe('0000ffe1-0000-1000-8000-00805f9b34fb', callback=handle, wait_for_response=False)
+    d.subscribe(DATA_CHARACTERISTIC, callback=get_weight, wait_for_response=False)
     logger.info("Subscribed")        
     while True:
         time.sleep(100)
