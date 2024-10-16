@@ -89,9 +89,9 @@ def button_pressed(adapter, device, target_weight):
         relay.off()
 
     if relay.value == False:
-        logger.info("Subscribing to weight")
         weight_reading = 0
         callback = lambda: monitor_weight(target_weight)
+        logger.info("Subscribing to weight")
         device.subscribe(DATA_CHARACTERISTIC, callback=callback, wait_for_response=False)
         while not weight_reading:
             logger.info("Waiting for weight reading")
@@ -111,11 +111,12 @@ if __name__ == '__main__':
     # addr = addresses[0]
     adapter = get_adapter()
     d = connect(adapter)
-    logger.info("Subscribing to handle")
-
     button.when_pressed = lambda: button_pressed(adapter, d, 15)
     
     while True:
         time.sleep(1)
-        button.close()
+        logger.info('Pressing button')
+        button.pin.drive_low()
+        time.sleep(0.1)
+        button.pin.drive_high()
         time.sleep(100)
