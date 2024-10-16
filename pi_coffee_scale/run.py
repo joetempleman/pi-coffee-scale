@@ -4,6 +4,7 @@ import time
 from pygatt import GATTToolBackend
 from pygatt.exceptions import NotConnectedError
 
+logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.debug("Starting")
 if __name__ == '__main__':
