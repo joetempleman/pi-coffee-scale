@@ -5,8 +5,7 @@ from pygatt import GATTToolBackend
 from pygatt.exceptions import NotConnectedError
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
+logger.debug("Starting")
 if __name__ == '__main__':
     # addresses = pyacaia.find_acaia_devices(backend='pygatt')
 
