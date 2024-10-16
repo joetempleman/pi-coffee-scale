@@ -32,10 +32,16 @@ if __name__ == '__main__':
     while d == None:
         try:
             d = adapter.connect(addr)
+            logger.info("Connected")
         except NotConnectedError:
             if tries < 5:    
                 logger.error("Failed to connect, retrying")
                 tries += 1
             else:
                 raise
+    logger.info("Subscribing to handle")
     d.subscribe('0000ffe1-0000-1000-8000-00805f9b34fb', handle)
+    logger.info("Subscribed")        
+    while True:
+        logger.info("Slept for 5 seconds")
+        time.sleep(5)
