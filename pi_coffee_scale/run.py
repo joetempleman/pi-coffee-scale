@@ -115,7 +115,7 @@ if __name__ == '__main__':
 
     button.when_pressed = lambda: button_pressed(adapter, d, 15)
     
-    d.subscribe(DATA_CHARACTERISTIC, callback=monitor_weight, wait_for_response=False)
-    logger.info("Subscribed")        
     while True:
+        time.sleep(1)
+        button.close()
         time.sleep(100)
