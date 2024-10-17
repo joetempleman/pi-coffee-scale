@@ -77,7 +77,6 @@ def connect(adapter: GATTToolBackend, addr="68:5E:1C:15:BC:F7") -> BLEDevice:
     return d
 
 def monitor_weight(handle, data, device, target_weight):
-    time.sleep(0.5)
     global subscribed
     global relay
     global weight_reading
