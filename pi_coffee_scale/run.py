@@ -2,6 +2,8 @@ import pyacaia
 import logging
 import time
 import pygatt
+import threading
+
 from pygatt import GATTToolBackend
 from pygatt.device import BLEDevice
 from pygatt.exceptions import NotConnectedError
@@ -43,7 +45,8 @@ logger.debug("Starting")
 relay = OutputDevice(RELAY_PIN, active_high=False, initial_value=False)
 button = Button(BUTTON_PIN)
 subscribed = False
-
+cancel_wait = False
+ 
 def reset(adapter) -> None:
     logger.info("Resetting Adapter")
     adapter.reset(); 
@@ -61,10 +64,10 @@ def connect(adapter: GATTToolBackend, addr="68:5E:1C:15:BC:F7") -> BLEDevice:
 
     logger.info("Connecting to %s", addr)
     tries = 0
-    d : BLEDevice = None
-    while d == None:
+    device : BLEDevice = None
+    while device == None:
         try:
-            d = adapter.connect(addr, timeout=0.5)
+            device = adapter.connect(addr, timeout=0.5)
             logger.info("Connected")
         except NotConnectedError:
             tries += 1
@@ -75,45 +78,56 @@ def connect(adapter: GATTToolBackend, addr="68:5E:1C:15:BC:F7") -> BLEDevice:
             # if tries % TRIES_BEFORE_RESET == 0:
             #     logger.error("Failed to connect, resetting adapter and retrying")
             #     reset()
-    return d
+    return device
+
+def dose_coffee(target_weight, device):
+    global cancel_wait
+    global relay
+    global weight_reading
+    global subscribed
+    
+    subscribed = False
+    callback = lambda handle, data: monitor_weight(handle, data, device, target_weight)
+    logger.info("Subscribing to weight")
+    device.subscribe(DATA_CHARACTERISTIC, callback=callback, wait_for_response=False)
+    time.sleep(0.1)
+    while not subscribed:
+        logger.info("Waiting for weight reading")
+        time.sleep(0.5)
+
+    logger.info("Weight reading working. Enabling relay")
+    relay.on()
+    while weight_reading + WEIGHT_BUFFER < target_weight or cancel_wait:
+        logger.info("Weight is %s, waiting", weight_reading)
+        time.sleep(0.1)
+    
+    logger.info("At weight, closing relay")
+    relay.off()
+    logger.info("Ubsubscribing")
+    device.unsubscribe(DATA_CHARACTERISTIC, wait_for_response=False)
+    logger.info("Unsubscribed!")    
+
 
 def monitor_weight(handle, data, device: BLEDevice, target_weight):
     global subscribed
-    global relay
     global weight_reading
     subscribed = True
     weight_reading = int(''.join(([str(v - 48) for v in data[3:8]]))) / 10
     # logger.info("Entered monitor_weight, weight = %s", weight_reading)
 
+
 def button_pressed(adapter: GATTToolBackend, device: BLEDevice, target_weight: int):
     global relay
     global weight_reading
+    global cancel_wait
     global subscribed
     if relay.value:
         relay.off()
-        device.unsubscribe(DATA_CHARACTERISTIC)
+        cancel_wait = True
+        device.unsubscribe(DATA_CHARACTERISTIC, False)
         
     if relay.value == False:
-        subscribed = False
-        callback = lambda handle, data: monitor_weight(handle, data, device, target_weight)
-        logger.info("Subscribing to weight")
-        device.subscribe(DATA_CHARACTERISTIC, callback=callback, wait_for_response=False)
-        time.sleep(0.1)
-        while not subscribed:
-            logger.info("Waiting for weight reading")
-            time.sleep(0.5)
-        logger.info("Weight reading working. Enabling relay")
-        relay.on()
-        while weight_reading + WEIGHT_BUFFER < target_weight:
-            logger.info("Weight is %s, waiting", weight_reading)
-            time.sleep(0.1)
-        
-        logger.info("At weight, closing relay")
-        relay.off()
-        logger.info("Ubsubscribing")
-        device.unsubscribe(DATA_CHARACTERISTIC, wait_for_response=False)
-        logger.info("Unsubscribed!")
-
+        threading.Thread(target=dose_coffee, args=(target_weight, device)).start()
 
 if __name__ == '__main__':
     # addresses = pyacaia.find_acaia_devices(backend='pygatt')
