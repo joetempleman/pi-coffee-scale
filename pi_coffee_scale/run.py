@@ -6,7 +6,7 @@ from pygatt import GATTToolBackend
 from pygatt.device import BLEDevice
 from pygatt.exceptions import NotConnectedError
 from gpiozero import OutputDevice, Button
-from pygatt.backends.gatttool.device import logger
+from pygatt.backends.gatttool import device
 
 WEIGHT_BUFFER = 1
 
@@ -36,7 +36,7 @@ RELAY_PIN = 2
 BUTTON_PIN = 3
 
 logging.basicConfig()
-logger.setLevel("DEBUG")
+device.log.setLevel("DEBUG")
 
 logger = logging.getLogger(__name__)
 logger.debug("Starting")
