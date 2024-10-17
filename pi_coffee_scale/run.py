@@ -99,7 +99,7 @@ def button_pressed(adapter: GATTToolBackend, device: BLEDevice, target_weight: i
         
     if relay.value == False:
         subscribed = False
-        callback = lambda handle, data: monitor_weight(handle, data, target_weight, device)
+        callback = lambda handle, data: monitor_weight(handle, data, device, target_weight)
         logger.info("Subscribing to weight")
         device.subscribe(DATA_CHARACTERISTIC, callback=callback, wait_for_response=False)
         time.sleep(0.1)
