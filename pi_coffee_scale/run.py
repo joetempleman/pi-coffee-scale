@@ -88,6 +88,7 @@ def monitor_weight(handle, data, device: BLEDevice, target_weight):
         logger.info("At weight, closing relay")
         relay.off()
         logger.info("Ubsubscribing")
+        import pdb; pdb.set_trace()
         device.unsubscribe(DATA_CHARACTERISTIC, wait_for_response=False)
         logger.info("Unsubscribed!")
 
