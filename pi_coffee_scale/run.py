@@ -48,8 +48,8 @@ subscribed = False
 cancel_wait = False
  
 def reset(adapter) -> None:
-    logger.info("Resetting Adapter")
-    adapter.reset(); 
+    # logger.info("Resetting Adapter")
+    # adapter.reset(); 
     logger.info("Starting Adapter")
     adapter.start(); 
 
@@ -126,8 +126,7 @@ def button_pressed(adapter: GATTToolBackend, device: BLEDevice, target_weight: i
         relay.off()
         cancel_wait = True
         device.unsubscribe(DATA_CHARACTERISTIC, wait_for_response=False)
-        
-    if relay.value == False:
+    else:
         threading.Thread(target=dose_coffee, args=(target_weight, device)).start()
 
 if __name__ == '__main__':
