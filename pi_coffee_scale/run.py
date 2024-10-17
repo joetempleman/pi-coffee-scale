@@ -2,7 +2,8 @@ import pyacaia
 import logging
 import time
 import pygatt
-from pygatt import GATTToolBackend, GATTToolBLEDevice
+from pygatt import GATTToolBackend
+from pygatt.device import BLEDevice
 from pygatt.exceptions import NotConnectedError
 from gpiozero import OutputDevice, Button
 
@@ -55,11 +56,11 @@ def get_adapter() -> GATTToolBackend:
     reset(adapter)
     return adapter
 
-def connect(adapter: GATTToolBackend, addr="68:5E:1C:15:BC:F7") -> GATTToolBLEDevice:
+def connect(adapter: GATTToolBackend, addr="68:5E:1C:15:BC:F7") -> BLEDevice:
 
     logger.info("Connecting to %s", addr)
     tries = 0
-    d : GATTToolBLEDevice = None
+    d : BLEDevice = None
     while d == None:
         try:
             d = adapter.connect(addr)
@@ -86,7 +87,7 @@ def monitor_weight(handle, data, target_weight):
         logger.info("At weight, closing relay")
         relay.off()
 
-def button_pressed(adapter: GATTToolBackend, device: GATTToolBLEDevice, target_weight: int):
+def button_pressed(adapter: GATTToolBackend, device: BLEDevice, target_weight: int):
     global relay
     global weight_reading
     global subscribed
