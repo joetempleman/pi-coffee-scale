@@ -39,6 +39,7 @@ logger.debug("Starting")
 
 relay = OutputDevice(RELAY_PIN, active_high=False, initial_value=False)
 button = Button(BUTTON_PIN)
+subscribed = False
 
 def reset(adapter):
     logger.info("Resetting Adapter")
@@ -74,8 +75,10 @@ def connect(adapter, addr="68:5E:1C:15:BC:F7"):
     return d
 
 def monitor_weight(handle, data, target_weight):
+    global subscribed
     global relay
     global weight_reading
+    subscribed = True
     weight_reading = int(''.join(([str(v - 48) for v in data[3:8]]))) / 10
     logger.info("Entered monitor_weight, weight = %s", weight_reading)
     if weight_reading + WEIGHT_BUFFER > target_weight:
@@ -85,16 +88,17 @@ def monitor_weight(handle, data, target_weight):
 def button_pressed(adapter, device, target_weight):
     global relay
     global weight_reading
+    global subscribed
     if relay.value:
         relay.off()
 
     if relay.value == False:
-        weight_reading = 0
+        subscribed = False
         callback = lambda handle, data: monitor_weight(handle, data, target_weight)
         logger.info("Subscribing to weight")
         device.subscribe(DATA_CHARACTERISTIC, callback=callback, wait_for_response=False)
         time.sleep(0.1)
-        while not weight_reading:
+        while not subscribed:
             logger.info("Waiting for weight reading")
             time.sleep(0.5)
         logger.info("Weight reading working. Enabling relay")
