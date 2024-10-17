@@ -84,13 +84,6 @@ def monitor_weight(handle, data, device: BLEDevice, target_weight):
     subscribed = True
     weight_reading = int(''.join(([str(v - 48) for v in data[3:8]]))) / 10
     logger.info("Entered monitor_weight, weight = %s", weight_reading)
-    if weight_reading + WEIGHT_BUFFER > target_weight:
-        logger.info("At weight, closing relay")
-        relay.off()
-        logger.info("Ubsubscribing")
-        import pdb; pdb.set_trace()
-        device.unsubscribe(DATA_CHARACTERISTIC, wait_for_response=False)
-        logger.info("Unsubscribed!")
 
 def button_pressed(adapter: GATTToolBackend, device: BLEDevice, target_weight: int):
     global relay
@@ -111,6 +104,16 @@ def button_pressed(adapter: GATTToolBackend, device: BLEDevice, target_weight: i
             time.sleep(0.5)
         logger.info("Weight reading working. Enabling relay")
         relay.on()
+        while weight_reading + WEIGHT_BUFFER < target_weight:
+            logger.info("Weight is %s, waiting", weight_reading)
+            time.sleep(0.1)
+        
+        logger.info("At weight, closing relay")
+        relay.off()
+        logger.info("Ubsubscribing")
+        device.unsubscribe(DATA_CHARACTERISTIC, wait_for_response=False)
+        logger.info("Unsubscribed!")
+
 
 if __name__ == '__main__':
     # addresses = pyacaia.find_acaia_devices(backend='pygatt')
