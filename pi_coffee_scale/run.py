@@ -121,6 +121,7 @@ def button_pressed(adapter: GATTToolBackend, device: BLEDevice, target_weight: i
     global weight_reading
     global cancel_wait
     global subscribed
+    logger.info("Button pressed, relay status %s", relay.value)
     if relay.value:
         relay.off()
         cancel_wait = True
@@ -149,4 +150,4 @@ if __name__ == '__main__':
         button.pin.drive_low()
         time.sleep(0.1)
         button.pin.drive_high()
-        time.sleep(20)
+        time.sleep(5)
