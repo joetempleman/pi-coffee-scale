@@ -97,7 +97,7 @@ def dose_coffee(target_weight, device):
 
     logger.info("Weight reading working. Enabling relay")
     relay.on()
-    while weight_reading + WEIGHT_BUFFER < target_weight or cancel_wait:
+    while weight_reading + WEIGHT_BUFFER < target_weight and not cancel_wait:
         logger.info("Weight is %s, waiting", weight_reading)
         time.sleep(0.1)
     
@@ -123,6 +123,7 @@ def button_pressed(adapter: GATTToolBackend, device: BLEDevice, target_weight: i
     global subscribed
     logger.info("Button pressed, relay status %s", relay.value)
     if relay.value == 1:
+        logger.info("Turning off relay")
         relay.off()
         cancel_wait = True
         device.unsubscribe(DATA_CHARACTERISTIC, wait_for_response=False)
