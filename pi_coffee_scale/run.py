@@ -129,4 +129,4 @@ if __name__ == '__main__':
         button.pin.drive_low()
         time.sleep(0.1)
         button.pin.drive_high()
-        time.sleep(100)
+        time.sleep(20)
