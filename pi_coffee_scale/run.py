@@ -6,7 +6,7 @@ from pygatt import GATTToolBackend
 from pygatt.device import BLEDevice
 from pygatt.exceptions import NotConnectedError
 from gpiozero import OutputDevice, Button
-
+from pygatt.backends.gatttool.device import logger
 
 WEIGHT_BUFFER = 1
 
@@ -36,9 +36,10 @@ RELAY_PIN = 2
 BUTTON_PIN = 3
 
 logging.basicConfig()
+logger.setLevel("DEBUG")
+
 logger = logging.getLogger(__name__)
 logger.debug("Starting")
-
 relay = OutputDevice(RELAY_PIN, active_high=False, initial_value=False)
 button = Button(BUTTON_PIN)
 subscribed = False
@@ -86,6 +87,7 @@ def monitor_weight(handle, data, device: BLEDevice, target_weight):
     if weight_reading + WEIGHT_BUFFER > target_weight:
         logger.info("At weight, closing relay")
         relay.off()
+        logger.info("Ubsubscribing")
         device.unsubscribe(DATA_CHARACTERISTIC, wait_for_response=False)
         logger.info("Unsubscribed!")
 
