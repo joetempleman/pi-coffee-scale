@@ -67,7 +67,7 @@ def connect(adapter: GATTToolBackend, addr="68:5E:1C:15:BC:F7") -> BLEDevice:
     device : BLEDevice = None
     while device == None:
         try:
-            device = adapter.connect(addr, timeout=0.5)
+            device = adapter.connect(addr, timeout=0.5, auto_reconnect=True)
             logger.info("Connected")
         except NotConnectedError:
             tries += 1
@@ -151,4 +151,4 @@ if __name__ == '__main__':
         button.pin.drive_low()
         time.sleep(0.1)
         button.pin.drive_high()
-        time.sleep(5)
+        time.sleep(2)
