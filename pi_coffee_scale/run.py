@@ -122,10 +122,10 @@ def button_pressed(adapter: GATTToolBackend, device: BLEDevice, target_weight: i
     global cancel_wait
     global subscribed
     logger.info("Button pressed, relay status %s", relay.value)
-    if relay.value:
+    if relay.value == 1:
         relay.off()
         cancel_wait = True
-        device.unsubscribe(DATA_CHARACTERISTIC, False)
+        device.unsubscribe(DATA_CHARACTERISTIC, wait_for_response=False)
         
     if relay.value == False:
         threading.Thread(target=dose_coffee, args=(target_weight, device)).start()
