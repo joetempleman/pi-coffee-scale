@@ -63,7 +63,7 @@ def connect(adapter: GATTToolBackend, addr="68:5E:1C:15:BC:F7") -> BLEDevice:
     d : BLEDevice = None
     while d == None:
         try:
-            d = adapter.connect(addr)
+            d = adapter.connect(addr, timeout=0.5)
             logger.info("Connected")
         except NotConnectedError:
             tries += 1
@@ -76,7 +76,7 @@ def connect(adapter: GATTToolBackend, addr="68:5E:1C:15:BC:F7") -> BLEDevice:
                 reset()
     return d
 
-def monitor_weight(handle, data, target_weight):
+def monitor_weight(handle, data, device, target_weight):
     global subscribed
     global relay
     global weight_reading
@@ -99,7 +99,7 @@ def button_pressed(adapter: GATTToolBackend, device: BLEDevice, target_weight: i
         
     if relay.value == False:
         subscribed = False
-        callback = lambda handle, data: monitor_weight(handle, data, target_weight)
+        callback = lambda handle, data: monitor_weight(handle, data, target_weight, device)
         logger.info("Subscribing to weight")
         device.subscribe(DATA_CHARACTERISTIC, callback=callback, wait_for_response=False)
         time.sleep(0.1)
