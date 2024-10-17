@@ -71,10 +71,10 @@ def connect(adapter: GATTToolBackend, addr="68:5E:1C:15:BC:F7") -> BLEDevice:
             if tries == MAX_TRIES:
                 raise            
             
-            # Every X tries, reset adapter
-            if tries % TRIES_BEFORE_RESET == 0:
-                logger.error("Failed to connect, resetting adapter and retrying")
-                reset()
+            # # Every X tries, reset adapter
+            # if tries % TRIES_BEFORE_RESET == 0:
+            #     logger.error("Failed to connect, resetting adapter and retrying")
+            #     reset()
     return d
 
 def monitor_weight(handle, data, device: BLEDevice, target_weight):
@@ -83,7 +83,7 @@ def monitor_weight(handle, data, device: BLEDevice, target_weight):
     global weight_reading
     subscribed = True
     weight_reading = int(''.join(([str(v - 48) for v in data[3:8]]))) / 10
-    logger.info("Entered monitor_weight, weight = %s", weight_reading)
+    # logger.info("Entered monitor_weight, weight = %s", weight_reading)
 
 def button_pressed(adapter: GATTToolBackend, device: BLEDevice, target_weight: int):
     global relay
