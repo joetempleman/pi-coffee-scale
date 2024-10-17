@@ -87,6 +87,7 @@ def monitor_weight(handle, data, device, target_weight):
         logger.info("At weight, closing relay")
         relay.off()
         device.unsubscribe(DATA_CHARACTERISTIC)
+        logger.info("Unsubscribed!")
 
 def button_pressed(adapter: GATTToolBackend, device: BLEDevice, target_weight: int):
     global relay
