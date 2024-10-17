@@ -85,7 +85,8 @@ def dose_coffee(target_weight, device):
     global relay
     global weight_reading
     global subscribed
-    
+    cancel_wait = False
+
     subscribed = False
     callback = lambda handle, data: monitor_weight(handle, data, device, target_weight)
     logger.info("Subscribing to weight")
@@ -105,7 +106,7 @@ def dose_coffee(target_weight, device):
     relay.off()
     logger.info("Ubsubscribing")
     device.unsubscribe(DATA_CHARACTERISTIC, wait_for_response=False)
-    logger.info("Unsubscribed!")    
+    logger.info("Unsubscribed!")
 
 
 def monitor_weight(handle, data, device: BLEDevice, target_weight):
