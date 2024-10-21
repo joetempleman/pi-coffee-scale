@@ -35,7 +35,7 @@ MAX_TRIES = 100
 TRIES_BEFORE_RESET = 5
 
 RELAY_PIN = 8
-BUTTON_PIN = 4
+BUTTON_PIN = 7
 
 logging.basicConfig()
 device.log.setLevel("DEBUG")
