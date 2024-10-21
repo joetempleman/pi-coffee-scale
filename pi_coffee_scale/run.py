@@ -35,7 +35,7 @@ MAX_TRIES = 100
 TRIES_BEFORE_RESET = 5
 
 RELAY_PIN = 2
-BUTTON_PIN = 3
+BUTTON_PIN = 14
 
 logging.basicConfig()
 device.log.setLevel("DEBUG")
@@ -92,10 +92,13 @@ def dose_coffee(target_weight, device):
     logger.info("Subscribing to weight")
     device.subscribe(DATA_CHARACTERISTIC, callback=callback, wait_for_response=False)
     time.sleep(0.1)
-    while not subscribed:
+    while not subscribed and not cancel_wait:
         logger.info("Waiting for weight reading")
         time.sleep(0.5)
 
+    if cancel_wait:        
+        return
+    
     logger.info("Weight reading working. Enabling relay")
     relay.on()
     while weight_reading + WEIGHT_BUFFER < target_weight and not cancel_wait:
@@ -146,9 +149,10 @@ if __name__ == '__main__':
     button.when_pressed = lambda: button_pressed(adapter, d, 15)
     
     while True:
-        time.sleep(1)
-        logger.info('Pressing button')
-        button.pin.drive_low()
-        time.sleep(0.1)
-        button.pin.drive_high()
-        time.sleep(2)
+        time.sleep(100)
+        # time.sleep(1)
+        # logger.info('Pressing button')
+        # button.pin.drive_low()
+        # time.sleep(0.1)
+        # button.pin.drive_high()
+        # time.sleep(2)
