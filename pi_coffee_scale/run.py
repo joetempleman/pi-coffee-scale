@@ -116,7 +116,12 @@ def monitor_weight(handle, data, device: BLEDevice, target_weight):
     global subscribed
     global weight_reading
     subscribed = True
-    weight_reading = int(''.join(([str(v - 48) for v in data[3:8]]))) / 10
+    try:
+        weight_reading = int(''.join(([str(v - 48) for v in data[3:8]]))) / 10
+    except:
+        logger.exception("Failed to parse weight, data payload %s", data)
+        subscribed = False
+        weight_reading = -1
     # logger.info("Entered monitor_weight, weight = %s", weight_reading)
 
 
