@@ -42,7 +42,7 @@ device.log.setLevel("DEBUG")
 
 logger = logging.getLogger(__name__)
 logger.debug("Starting")
-relay = OutputDevice(RELAY_PIN, active_high=False, initial_value=False)
+relay = OutputDevice(RELAY_PIN, active_high=True, initial_value=True)
 button = Button(BUTTON_PIN)
 subscribed = False
 cancel_wait = False
