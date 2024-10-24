@@ -6,18 +6,19 @@ import threading
 
 from pygatt import GATTToolBackend
 from pygatt.device import BLEDevice
-from pygatt.exceptions import NotConnectedError
+from pygatt.exceptions import NotConnectedError, BLEError
 from gpiozero import OutputDevice, Button
 from pygatt.backends.gatttool import device
+from queue import Queue
 
 WEIGHT_BUFFER = 1
 
-BASE_UUID = '0000%s-0000-1000-8000-00805f9b34fb'
-DATA_SERVICE = BASE_UUID % 'ffe0'
-DATA_CHARACTERISTIC = BASE_UUID % 'ffe1'
+BASE_UUID = "0000%s-0000-1000-8000-00805f9b34fb"
+DATA_SERVICE = BASE_UUID % "ffe0"
+DATA_CHARACTERISTIC = BASE_UUID % "ffe1"
 
-FELICITA_GRAM_UNIT = 'g'
-FELICITA_OUNCE_UNIT = 'oz'
+FELICITA_GRAM_UNIT = "g"
+FELICITA_OUNCE_UNIT = "oz"
 
 MIN_BATTERY_LEVEL = 129
 MAX_BATTERY_LEVEL = 158
@@ -31,7 +32,6 @@ CMD_TOGGLE_PRECISION = 0x44
 CMD_TARE = 0x54
 CMD_TOGGLE_UNIT = 0x55
 
-MAX_TRIES = 100
 TRIES_BEFORE_RESET = 5
 
 RELAY_PIN = 17
@@ -42,122 +42,162 @@ device.log.setLevel("DEBUG")
 
 logger = logging.getLogger(__name__)
 logger.debug("Starting")
+
+
 relay = OutputDevice(RELAY_PIN, active_high=True, initial_value=True)
 button = Button(BUTTON_PIN)
-subscribed = False
-cancel_wait = False
- 
+
+
+class CancelledDose(Exception):
+    pass
+
+
+class FailedConnection(Exception):
+    pass
+
+
 def reset(adapter) -> None:
     # logger.info("Resetting Adapter")
-    # adapter.reset(); 
+    # adapter.reset();
     logger.info("Starting Adapter")
-    adapter.start(); 
+    adapter.start()
+
 
 def get_adapter() -> GATTToolBackend:
     logger.info("Getting Adapter")
-    adapter = GATTToolBackend('hci0'); 
+    adapter = GATTToolBackend("hci0")
 
     reset(adapter)
     return adapter
 
-def connect(adapter: GATTToolBackend, addr="68:5E:1C:15:BC:F7") -> BLEDevice:
 
+def connect(adapter: GATTToolBackend, addr: str, max_tries: int = 100) -> BLEDevice:
     logger.info("Connecting to %s", addr)
     tries = 0
-    device : BLEDevice = None
+    device: BLEDevice = None
     while device == None:
         try:
             device = adapter.connect(addr, timeout=0.5, auto_reconnect=True)
             logger.info("Connected")
         except NotConnectedError:
             tries += 1
-            if tries == MAX_TRIES:
-                raise            
-            
-            # # Every X tries, reset adapter
-            # if tries % TRIES_BEFORE_RESET == 0:
-            #     logger.error("Failed to connect, resetting adapter and retrying")
-            #     reset()
+            if tries == max_tries:
+                raise FailedConnection(
+                    "Hit max retries on adapter connect to addr %s", addr
+                )
+
     return device
 
-def dose_coffee(target_weight, device):
-    global cancel_wait
-    global relay
-    global weight_reading
-    global subscribed
-    cancel_wait = False
 
-    subscribed = False
-    callback = lambda handle, data: monitor_weight(handle, data, device, target_weight)
-    logger.info("Subscribing to weight")
-    device.subscribe(DATA_CHARACTERISTIC, callback=callback, wait_for_response=False)
-    time.sleep(0.1)
-    while not subscribed and not cancel_wait:
-        logger.info("Waiting for weight reading")
-        time.sleep(0.5)
+class CoffeeDoser:
 
-    if cancel_wait:        
-        return
-    
-    logger.info("Weight reading working. Enabling relay")
-    relay.on()
-    while weight_reading + WEIGHT_BUFFER < target_weight and not cancel_wait:
-        logger.info("Weight is %s, waiting", weight_reading)
+    def __init__(
+        self,
+        adapter: GATTToolBackend,
+        scale_addr: str,
+        button: Button,
+        relay: OutputDevice,
+        target_weight: float = 15.5,
+    ):
+        self._lock = threading.Lock()
+        self._target_weight = target_weight
+        self._adapter = adapter
+        # Try to connect on startup to speed things up, but it will connect on button press
+        # if the scale isn't currently on, so don't try too many times
+        self._device = connect(self._adapter, scale_addr, max_tries=10)
+        self._button = button
+
+        self._relay = relay
+
+        self._scale_addr = scale_addr
+        self._subscribed = False
+        self._cancel_dose = False
+
+        self._thread_queue = Queue()
+        
+    def run(self):
+        self._button.when_pressed = self.button_pressed
+
+        while True:
+            time.sleep(100)
+
+
+    def dose_coffee(self):
+        with self._lock:
+            try:
+                self._subscribe()
+            except FailedConnection:
+                logger.error("Failed to connect to scale. Canceling Dose")
+                return
+
+            logger.info("Weight reading working. Enabling relay")
+            self._relay.on()
+            while (
+                self.weight_reading + WEIGHT_BUFFER < self._target_weight
+                and not self._cancel_dose
+            ):
+                logger.info("Weight is %s, waiting", self.weight_reading)
+                time.sleep(0.1)
+
+            self._relay_off_and_unsubscribe()
+
+    def monitor_weight(self, handle, data):
+        self._subscribed = True
+        try:
+            self.weight_reading = int("".join(([str(v - 48) for v in data[3:8]]))) / 10
+        except:
+            logger.exception("Failed to parse weight, data payload %s", data)
+            self._subscribed = False
+            self.weight_reading = -1
+        # logger.info("Entered monitor_weight, weight = %s", weight_reading)
+
+    def button_pressed(self):
+        logger.info("Button pressed, relay status %s", self._relay.value)
+        if self._relay.value == 1 or self._lock.locked():
+            logger.info("Button pressed again, turning off relay")
+            self._cancel_dose = True
+            # Setting _cancel_dose should be enough, but in case the other thread has died,
+            # turn off the relay and unsubscribe too
+            self._relay_off_and_unsubscribe()
+        else:
+            threading.Thread(target=self.dose_coffee).start()
+
+    def _relay_off_and_unsubscribe(self):
+        logger.info("Relay off")
+        self._relay.off()
+        try:
+            logger.info("Unsubscribing")
+            self._device.unsubscribe(DATA_CHARACTERISTIC, wait_for_response=False)
+        except BLEError:
+            logger.warning("Failed to unsubscribe, continuing")
+
+    def _subscribe(self):
+        self._subscribed = False
+        if not self._device:
+            self._device = connect(self._scale_addr)
+
+        logger.info("Subscribing to weight")
+        self._device.subscribe(
+            DATA_CHARACTERISTIC,
+            callback=self.monitor_weight,
+            wait_for_response=False,
+        )
         time.sleep(0.1)
-    
-    logger.info("At weight, closing relay")
-    relay.off()
-    logger.info("Ubsubscribing")
-    device.unsubscribe(DATA_CHARACTERISTIC, wait_for_response=False)
-    logger.info("Unsubscribed!")
+
+        tries = 0
+        while not self._subscribed:
+            if self._cancel_dose:
+                raise CancelledDose("Wait cancelled by button press")
+
+            if tries >= 20:
+                raise FailedConnection("Tried %s times and failed to subscribe", tries)
+
+            logger.info("Waiting for weight reading")
+            time.sleep(0.5)
 
 
-def monitor_weight(handle, data, device: BLEDevice, target_weight):
-    global subscribed
-    global weight_reading
-    subscribed = True
-    try:
-        weight_reading = int(''.join(([str(v - 48) for v in data[3:8]]))) / 10
-    except:
-        logger.exception("Failed to parse weight, data payload %s", data)
-        subscribed = False
-        weight_reading = -1
-    # logger.info("Entered monitor_weight, weight = %s", weight_reading)
-
-
-def button_pressed(adapter: GATTToolBackend, device: BLEDevice, target_weight: int):
-    global relay
-    global weight_reading
-    global cancel_wait
-    global subscribed
-    logger.info("Button pressed, relay status %s", relay.value)
-    if relay.value == 1:
-        logger.info("Turning off relay")
-        relay.off()
-        cancel_wait = True
-        device.unsubscribe(DATA_CHARACTERISTIC, wait_for_response=False)
-    else:
-        threading.Thread(target=dose_coffee, args=(target_weight, device)).start()
-
-if __name__ == '__main__':
-    # addresses = pyacaia.find_acaia_devices(backend='pygatt')
-
-    # if addresses:
-    #     logger.debug("Mac addr %s", addresses)        
-    # else:
-    #     logger.error("Failed to find devices")
-    #     sys.exit(1)
-
-    # addr = addresses[0]
+if __name__ == "__main__":
     adapter = get_adapter()
-    d = connect(adapter)
-    button.when_pressed = lambda: button_pressed(adapter, d, 15)
-    
-    while True:
-        time.sleep(100)
-        # time.sleep(1)
-        # logger.info('Pressing button')
-        # button.pin.drive_low()
-        # time.sleep(0.1)
-        # button.pin.drive_high()
-        # time.sleep(2)
+
+    doser = CoffeeDoser(adapter, "68:5E:1C:15:BC:F7", button, relay)
+    doser.run()
