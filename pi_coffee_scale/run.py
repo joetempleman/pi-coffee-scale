@@ -103,8 +103,11 @@ class CoffeeDoser:
         self._target_weight = target_weight
         self._adapter = adapter
         # Try to connect on startup to speed things up, but it will connect on button press
-        # if the scale isn't currently on, so don't try too many times
-        self._device = connect(self._adapter, scale_addr, max_tries=10)
+        # if the scale isn't currently on, so don't try too many times and continue
+        try:
+            self._device = connect(self._adapter, scale_addr, max_tries=10)
+        except FailedConnection:
+            self._device = None
         self._button = button
 
         self._relay = relay
