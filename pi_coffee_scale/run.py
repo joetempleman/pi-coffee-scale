@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 logger.debug("Starting")
 
 
-relay = OutputDevice(RELAY_PIN, active_high=True, initial_value=True)
+relay = OutputDevice(RELAY_PIN, active_high=True, initial_value=False)
 button = Button(BUTTON_PIN)
 
 
@@ -97,7 +97,7 @@ class CoffeeDoser:
         scale_addr: str,
         button: Button,
         relay: OutputDevice,
-        target_weight: float = 15.5,
+        target_weight: float = 16,
     ):
         self._lock = threading.Lock()
         self._target_weight = target_weight
