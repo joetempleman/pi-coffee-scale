@@ -57,8 +57,8 @@ class FailedConnection(Exception):
 
 
 def reset(adapter) -> None:
-    # logger.info("Resetting Adapter")
-    # adapter.reset();
+    logger.info("Resetting Adapter")
+    adapter.reset();
     logger.info("Starting Adapter")
     adapter.start()
 
@@ -85,6 +85,9 @@ def connect(adapter: GATTToolBackend, addr: str, max_tries: int = 100) -> BLEDev
                 raise FailedConnection(
                     "Hit max retries on adapter connect to addr %s", addr
                 )
+            if tries % 10 == 0:
+                logger.info("Tried connection with 10 failed attempts")
+                reset(adapter)
 
     return device
 
