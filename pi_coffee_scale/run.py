@@ -10,6 +10,7 @@ from pygatt.exceptions import NotConnectedError, BLEError
 from gpiozero import OutputDevice, Button
 from pygatt.backends.gatttool import device
 from queue import Queue
+from pi_coffee_scale.run import FailedConnection
 
 WEIGHT_BUFFER = 1
 
@@ -183,11 +184,14 @@ class CoffeeDoser:
             self._device = connect(self._adapter, self._scale_addr)
 
         logger.info("Subscribing to weight")
-        self._device.subscribe(
-            DATA_CHARACTERISTIC,
-            callback=self.monitor_weight,
-            wait_for_response=False,
-        )
+        try:
+            self._device.subscribe(
+                DATA_CHARACTERISTIC,
+                callback=self.monitor_weight,
+                wait_for_response=False,
+            )
+        except BLEError:
+            raise FailedConnection("Failed to subscribe")
         time.sleep(0.1)
         logger.info("Subscribed=%s", self._subscribed)
         tries = 0
