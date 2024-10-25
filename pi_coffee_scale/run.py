@@ -128,6 +128,7 @@ class CoffeeDoser:
 
     def dose_coffee(self):
         with self._lock:
+            self._cancel_dose = False
             try:
                 self._subscribe()
             except FailedConnection:
