@@ -171,6 +171,7 @@ class CoffeeDoser:
         try:
             logger.info("Unsubscribing")
             self._device.unsubscribe(DATA_CHARACTERISTIC, wait_for_response=False)
+            logger.info("Unsubscribed")
         except BLEError:
             logger.warning("Failed to unsubscribe, continuing")
 
@@ -186,7 +187,7 @@ class CoffeeDoser:
             wait_for_response=False,
         )
         time.sleep(0.1)
-
+        logger.info("Subscribed=%s", self._subscribed)
         tries = 0
         while not self._subscribed:
             if self._cancel_dose:
