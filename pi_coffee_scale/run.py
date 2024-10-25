@@ -10,7 +10,6 @@ from pygatt.exceptions import NotConnectedError, BLEError
 from gpiozero import OutputDevice, Button
 from pygatt.backends.gatttool import device
 from queue import Queue
-from pi_coffee_scale.run import FailedConnection
 
 WEIGHT_BUFFER = 1
 
