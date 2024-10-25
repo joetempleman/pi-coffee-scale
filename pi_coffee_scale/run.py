@@ -102,10 +102,11 @@ class CoffeeDoser:
         self._lock = threading.Lock()
         self._target_weight = target_weight
         self._adapter = adapter
+        self._scale_addr = scale_addr
         # Try to connect on startup to speed things up, but it will connect on button press
         # if the scale isn't currently on, so don't try too many times and continue
         try:
-            self._device = connect(self._adapter, scale_addr, max_tries=10)
+            self._device = connect(self._adapter, self._scale_addr, max_tries=10)
         except FailedConnection:
             self._device = None
             logger.info("Failed to connect, continuing")
@@ -113,7 +114,6 @@ class CoffeeDoser:
 
         self._relay = relay
 
-        self._scale_addr = scale_addr
         self._subscribed = False
         self._cancel_dose = False
 
@@ -179,7 +179,7 @@ class CoffeeDoser:
     def _subscribe(self):
         self._subscribed = False
         if not self._device:
-            self._device = connect(self._scale_addr)
+            self._device = connect(self._adapter, self._scale_addr)
 
         logger.info("Subscribing to weight")
         self._device.subscribe(
