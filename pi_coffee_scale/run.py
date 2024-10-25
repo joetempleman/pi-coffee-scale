@@ -198,6 +198,7 @@ class CoffeeDoser:
                 raise FailedConnection("Tried %s times and failed to subscribe", tries)
 
             logger.info("Waiting for weight reading")
+            tries += 1
             time.sleep(0.5)
 
 
