@@ -108,6 +108,7 @@ class CoffeeDoser:
             self._device = connect(self._adapter, scale_addr, max_tries=10)
         except FailedConnection:
             self._device = None
+            logger.info("Failed to connect, continuing")
         self._button = button
 
         self._relay = relay
