@@ -131,8 +131,11 @@ class CoffeeDoser:
             self._cancel_dose = False
             try:
                 self._subscribe()
-            except BLEError:
+            except FailedConnection:
                 logger.error("Failed to connect to scale. Canceling Dose")
+                return
+            except CancelledDose:
+                logger.info("Cancelled Dose, finishing")            
                 return
 
             logger.info("Weight reading working. Enabling relay")
