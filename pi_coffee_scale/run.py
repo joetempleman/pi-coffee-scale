@@ -1,4 +1,3 @@
-import pyacaia
 import logging
 import time
 import pygatt
@@ -41,6 +40,7 @@ logging.basicConfig()
 device.log.setLevel("DEBUG")
 
 logger = logging.getLogger(__name__)
+logger.setLevel("DEBUG")
 logger.debug("Starting")
 
 
